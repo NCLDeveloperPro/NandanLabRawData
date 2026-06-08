@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using NandanLabRawData.Services;
+using NandanLabRawData.Logging;
 
 namespace NandanLabRawData
 {
@@ -35,6 +36,7 @@ namespace NandanLabRawData
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Warning: Database initialization failed: {ex.Message}");
                 StatusChanged?.Invoke($"Warning: Database initialization failed: {ex.Message}");
                 _databaseService = null;
             }
@@ -54,6 +56,7 @@ namespace NandanLabRawData
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Warning: Could not create Processed folder: {ex.Message}");
                 StatusChanged?.Invoke($"Warning: Could not create Processed folder: {ex.Message}");
             }
         }
@@ -87,6 +90,7 @@ namespace NandanLabRawData
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error starting monitor: {ex.Message}");
                 StatusChanged?.Invoke($"Error starting monitor: {ex.Message}");
                 _isRunning = false;
             }
@@ -122,6 +126,7 @@ namespace NandanLabRawData
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error processing existing files: {ex.Message}");
                 StatusChanged?.Invoke($"Error processing existing files: {ex.Message}");
             }
         }
@@ -244,6 +249,7 @@ namespace NandanLabRawData
                     }
                     catch (Exception dbEx)
                     {
+                        FileLogger.Log($"Error saving to database: {dbEx.Message}");
                         StatusChanged?.Invoke($"Warning: Could not save to database: {dbEx.Message}");
                     }
                 }
@@ -255,6 +261,7 @@ namespace NandanLabRawData
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error processing file: {ex.Message}");
                 string filename = Path.GetFileName(filePath);
                 FileProcessed?.Invoke(filename, false, $"Error: {ex.Message}");
                 StatusChanged?.Invoke($"Error processing file: {ex.Message}");

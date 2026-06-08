@@ -4,6 +4,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using NandanLabRawData.Logging;
 
 namespace NandanLabRawData.Services
 {
@@ -35,7 +36,7 @@ namespace NandanLabRawData.Services
             catch (Exception ex)
             {
                 // Log error but allow application to continue
-                System.Diagnostics.Debug.WriteLine($"Database migration error: {ex.Message}");
+                FileLogger.Log($"Database migration error: {ex.Message}");
 
                 try
                 {
@@ -45,7 +46,7 @@ namespace NandanLabRawData.Services
                 }
                 catch (Exception innerEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Database creation error: {innerEx.Message}");
+                    FileLogger.Log($"Database creation error: {innerEx.Message}");
                     _databaseInitialized = false;
                 }
             }
@@ -98,12 +99,12 @@ namespace NandanLabRawData.Services
                 _context.AnalyzerReports.Add(report);
                 await _context.SaveChangesAsync();
 
-                System.Diagnostics.Debug.WriteLine($"Successfully saved report {report.Id} for sample {sampleId} to SQL Server");
+                FileLogger.Log($"Successfully saved report {report.Id} for sample {sampleId} to SQL Server");
                 return report;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error saving analyzer report: {ex.Message}");
+                FileLogger.Log($"Error saving analyzer report: {ex.Message}");
                 throw new InvalidOperationException($"Error saving analyzer report to SQL Server: {ex.Message}", ex);
             }
         }
@@ -121,6 +122,7 @@ namespace NandanLabRawData.Services
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error retrieving report: {ex.Message}");
                 throw new InvalidOperationException($"Error retrieving report: {ex.Message}", ex);
             }
         }
@@ -138,6 +140,7 @@ namespace NandanLabRawData.Services
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error retrieving reports: {ex.Message}");
                 throw new InvalidOperationException($"Error retrieving reports: {ex.Message}", ex);
             }
         }
@@ -156,6 +159,7 @@ namespace NandanLabRawData.Services
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error retrieving reports by sample ID: {ex.Message}");
                 throw new InvalidOperationException($"Error retrieving reports by sample ID: {ex.Message}", ex);
             }
         }
@@ -174,6 +178,7 @@ namespace NandanLabRawData.Services
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error retrieving reports by date range: {ex.Message}");
                 throw new InvalidOperationException($"Error retrieving reports by date range: {ex.Message}", ex);
             }
         }
@@ -189,6 +194,7 @@ namespace NandanLabRawData.Services
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error counting reports: {ex.Message}");
                 throw new InvalidOperationException($"Error counting reports: {ex.Message}", ex);
             }
         }

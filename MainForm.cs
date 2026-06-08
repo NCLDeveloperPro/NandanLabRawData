@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
+using NandanLabRawData.Logging;
 
 namespace NandanLabRawData
 {
@@ -176,12 +177,15 @@ namespace NandanLabRawData
 
                 _monitorService.Start();
                 _isMonitoring = true;
+                buttonStop.Enabled = true;
+                Cursor = Cursors.Default;
             }
             catch (Exception ex)
             {
                 Cursor = Cursors.Default;
                 buttonStart.Enabled = true;
                 MessageBox.Show($"Error starting monitoring: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                FileLogger.Log($"Error starting monitoring: {ex.Message}");
             }
         }
 
@@ -209,6 +213,7 @@ namespace NandanLabRawData
             }
             catch (Exception ex)
             {
+                FileLogger.Log($"Error stopping monitoring: {ex.Message}");
                 MessageBox.Show($"Error stopping monitoring: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

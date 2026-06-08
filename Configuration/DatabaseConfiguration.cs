@@ -11,7 +11,7 @@ namespace NandanLabRawData.Configuration
         /// SQL Server connection string
         /// Update this with your actual database credentials
         /// </summary>
-        public const string ConnectionString =
+        public const string ConnectionString = //"Server=192.168.1.100;Database=NandanLabDbDev;User Id=developer;Password=p@$$w0rd;Encrypt=True;TrustServerCertificate=True;Connect Timeout=30;";
             "Data Source=103.191.208.18; Initial Catalog=NandanLabDbDev; Integrated Security=False;User ID=developer;Password=p@$$w0rd;" +
             "Encrypt=True;TrustServerCertificate=True;";
 

@@ -63,6 +63,9 @@ namespace NandanLabRawData.Data
                 entity.Property(e => e.AnalysisDate)
                     .HasColumnType("datetime2");
 
+                entity.Property(e => e.IsProcessed)                    
+                    .HasDefaultValue(0);
+
                 // One-to-many relationship: AnalyzerReport -> AnalyzerResults
                 entity.HasMany(e => e.Results)
                     .WithOne(r => r.AnalyzerReport)

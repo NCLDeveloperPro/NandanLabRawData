@@ -33,6 +33,11 @@ namespace NandanLabRawData.Models
         public string RawData { get; set; }
 
         /// <summary>
+        /// Indicates whether the report has been processed
+        /// </summary>
+        public int? IsProcessed { get; set; }
+
+        /// <summary>
         /// Collection of test results for this report
         /// </summary>
         public ICollection<AnalyzerResult> Results { get; set; } = new List<AnalyzerResult>();

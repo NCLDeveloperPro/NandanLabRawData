@@ -1,10 +1,12 @@
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using NandanLabRawData.Data;
+using NandanLabRawData.Logging;
 using NandanLabRawData.Models;
 using System;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using System.Data;
 using System.Linq;
-using NandanLabRawData.Logging;
+using System.Threading.Tasks;
 
 namespace NandanLabRawData.Services
 {
@@ -15,7 +17,7 @@ namespace NandanLabRawData.Services
     {
         private readonly LabDataContext _context;
         private bool _databaseInitialized = false;
-
+        
         public DatabaseService()
         {
             _context = new LabDataContext();
@@ -60,7 +62,7 @@ namespace NandanLabRawData.Services
         /// <summary>
         /// Saves analyzer report and results to the database
         /// </summary>
-        public async Task<AnalyzerReport> SaveAnalyzerReportAsync(
+        public async Task<Report> SaveAnalyzerReportAsync(
             string sampleId,
             DateTime? analysisDate,
             string sourceFileName,
@@ -74,33 +76,53 @@ namespace NandanLabRawData.Services
 
             try
             {
-                var report = new AnalyzerReport
+                var finalResult = ResultHelper.RemoveSpecificResults(results);
+                var objReport = new Report();
+                var currentUserId = "a5e5522d-3ce6-4e14-8b03-c915c9b58f86";                
+                objReport.SampleId = sampleId;
+                objReport.ReportUrlId = Guid.NewGuid().ToString();
+                objReport.IsVerifiedAndFinished = false;
+                objReport.CreatedBy = currentUserId;
+                objReport.CreatedOn = DateTime.Now;
+                objReport.UpdatedOn = DateTime.Now;
+                objReport.UpdatedBy = currentUserId;
+                objReport.LabId = 3;
+                objReport.IsSelfReport = true;
+                List<ReportDetail> lstReportDetails = new List<ReportDetail>();
+                List<ReportFieldData> lstReportFieldData = new List<ReportFieldData>();
+                int reportFormId = 130;
+                var formFields = FormFieldsHelper.GetReportFormFields();               
+                foreach (var item in finalResult)
                 {
-                    SampleId = sampleId ?? "Unknown",
-                    AnalysisDate = analysisDate,
-                    SourceFileName = sourceFileName,
-                    RawData = rawData,
-                    ProcessedDate = DateTime.Now
-                };
-
-                // Add results
-                foreach (var result in results)
-                {
-                    report.Results.Add(new AnalyzerResult
+                    var formField = formFields.FirstOrDefault(x => x.Value.Equals(item.parameterName, StringComparison.OrdinalIgnoreCase));
+                    if (formField != null)
                     {
-                        ParameterName = result.parameterName ?? string.Empty,
-                        Value = result.value ?? string.Empty,
-                        Unit = result.unit ?? string.Empty,
-                        ReferenceRange = result.referenceRange ?? string.Empty,
-                        Flag = result.flag ?? string.Empty
-                    });
+                        ReportFieldData objReportFieldData = new ReportFieldData
+                        {
+                            FieldId = formField?.Id ?? 0,
+                            FieldValue = item.value
+                        };
+                        lstReportFieldData.Add(objReportFieldData);                       
+                    }
+                }
+                ReportDetail objReportDetail = new ReportDetail
+                {
+                    IsReportOutsourced = false,
+                    ReportFormId = reportFormId,
+                    ReportFieldData = lstReportFieldData
+                };
+                lstReportDetails.Add(objReportDetail);
+
+                if (lstReportDetails.Count > 0)
+                {
+                    objReport.ReportDetails = lstReportDetails;
                 }
 
-                _context.AnalyzerReports.Add(report);
+                _context.Reports.Add(objReport);
                 await _context.SaveChangesAsync();
-
-                FileLogger.Log($"Successfully saved report {report.Id} for sample {sampleId} to SQL Server");
-                return report;
+                int reportId = objReport.Id;
+                UpdateReportUniqueNumber(reportId);
+                return objReport;
             }
             catch (Exception ex)
             {
@@ -109,95 +131,28 @@ namespace NandanLabRawData.Services
             }
         }
 
-        /// <summary>
-        /// Gets analyzer report by ID
-        /// </summary>
-        public async Task<AnalyzerReport> GetReportByIdAsync(int id)
+
+        public static void UpdateReportUniqueNumber(int reportId)
         {
             try
             {
-                return await _context.AnalyzerReports
-                    .Where(r => r.Id == id)
-                    .FirstOrDefaultAsync();
+                using (SqlConnection connection = new SqlConnection("Data Source=103.191.208.18;Initial Catalog=NandanLabDbDev;Integrated Security=False;User ID=developer;Password=p@$$w0rd;Encrypt=True;TrustServerCertificate=True;"))
+                using (SqlCommand cmd = new SqlCommand("UpdateReportUniqueNumberPerDay", connection))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new SqlParameter("@reportId", SqlDbType.Int) { Value = reportId });
+
+                    connection.Open();
+                    int rowsAffected = cmd.ExecuteNonQuery(); // Use this for UPDATE/INSERT/DELETE
+                }
             }
             catch (Exception ex)
             {
-                FileLogger.Log($"Error retrieving report: {ex.Message}");
-                throw new InvalidOperationException($"Error retrieving report: {ex.Message}", ex);
+                throw ex;
             }
         }
 
-        /// <summary>
-        /// Gets all analyzer reports
-        /// </summary>
-        public async Task<List<AnalyzerReport>> GetAllReportsAsync()
-        {
-            try
-            {
-                return await _context.AnalyzerReports
-                    .OrderByDescending(r => r.ProcessedDate)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                FileLogger.Log($"Error retrieving reports: {ex.Message}");
-                throw new InvalidOperationException($"Error retrieving reports: {ex.Message}", ex);
-            }
-        }
 
-        /// <summary>
-        /// Gets reports by sample ID
-        /// </summary>
-        public async Task<List<AnalyzerReport>> GetReportsBySampleIdAsync(string sampleId)
-        {
-            try
-            {
-                return await _context.AnalyzerReports
-                    .Where(r => r.SampleId == sampleId)
-                    .OrderByDescending(r => r.ProcessedDate)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                FileLogger.Log($"Error retrieving reports by sample ID: {ex.Message}");
-                throw new InvalidOperationException($"Error retrieving reports by sample ID: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Gets reports within a date range
-        /// </summary>
-        public async Task<List<AnalyzerReport>> GetReportsByDateRangeAsync(DateTime startDate, DateTime endDate)
-        {
-            try
-            {
-                return await _context.AnalyzerReports
-                    .Where(r => r.ProcessedDate >= startDate && r.ProcessedDate <= endDate)
-                    .OrderByDescending(r => r.ProcessedDate)
-                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                FileLogger.Log($"Error retrieving reports by date range: {ex.Message}");
-                throw new InvalidOperationException($"Error retrieving reports by date range: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Gets total number of reports in database
-        /// </summary>
-        public async Task<int> GetTotalReportCountAsync()
-        {
-            try
-            {
-                return await _context.AnalyzerReports.CountAsync();
-            }
-            catch (Exception ex)
-            {
-                FileLogger.Log($"Error counting reports: {ex.Message}");
-                throw new InvalidOperationException($"Error counting reports: {ex.Message}", ex);
-            }
-        }
 
         /// <summary>
         /// Disposes the DbContext

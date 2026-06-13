@@ -1,11 +1,12 @@
+using NandanLabRawData.Logging;
+using NandanLabRawData.Models;
+using NandanLabRawData.Services;
 using System;
-using System.IO;
-using System.Threading;
 using System.Collections.Generic;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using NandanLabRawData.Services;
-using NandanLabRawData.Logging;
+using System.Threading;
 
 namespace NandanLabRawData
 {
@@ -175,6 +176,11 @@ namespace NandanLabRawData
         {
             try
             {
+                if (!ResultHelper.IsInternetAvailableAsync().GetAwaiter().GetResult())
+                {
+                    FileProcessed?.Invoke(Path.GetFileName(filePath), false, "No internet connection - cannot process");
+                    return;
+                }
                 // Skip if not a .txt file
                 if (Path.GetExtension(filePath) != ".txt")
                     return;
@@ -202,7 +208,7 @@ namespace NandanLabRawData
                 }
 
                 // Parse the file
-                var report = _parser.ParseRawData(filePath);
+                var reports = _parser.ParseRawData(filePath);
 
                 // Move file to Processed folder
                 string fileName = Path.GetFileName(filePath);
@@ -219,33 +225,52 @@ namespace NandanLabRawData
                     processedFilePath = Path.Combine(_processedFolderPath, fileName);
                 }
 
-                File.Move(filePath, processedFilePath);
+                //File.Move(filePath, processedFilePath);
 
-                // Store the hash of processed content
-                _processedFileHashes.Add(contentHash);
+                //// Store the hash of processed content
+                //_processedFileHashes.Add(contentHash);
 
                 // Save to database if service is available
                 if (_databaseService != null)
                 {
                     try
                     {
-                        var results = report.Results.Select(r => (
-                            r.ParameterName,
-                            r.Value,
-                            r.Unit,
-                            r.ReferenceRange,
-                            r.Flag
-                        )).ToList();
-
-                        var dbReport = _databaseService.SaveAnalyzerReportAsync(
-                            report.SampleId,
-                            report.AnalysisDate,
-                            Path.GetFileName(filePath),
-                            report.RawData,
-                            results
-                        ).GetAwaiter().GetResult();
-
-                        StatusChanged?.Invoke($"Database: Saved report ID {dbReport.Id} with {dbReport.Results.Count} results");
+                        foreach (var report in reports)
+                        {
+                            var results = report.Results.Select(r => (
+                                r.ParameterName,
+                                r.Value,
+                                r.Unit,
+                                r.ReferenceRange,
+                                r.Flag
+                            )).ToList();
+                            FileProcessed?.Invoke($"SampleId: {report.SampleId}", true, "");
+                            string header = string.Format("\n{0,-20}\t{1,-15}", "ParameterName", "Value");
+                            FileProcessed?.Invoke(header, true, "");
+                            var formFields = FormFieldsHelper.GetReportFormFields();
+                            foreach (var item in report.Results)
+                            {
+                                var formField = formFields.FirstOrDefault(x => x.Value.Equals(item.ParameterName, StringComparison.OrdinalIgnoreCase));
+                                if (formField != null)
+                                {
+                                    string row = string.Format("{0,-20}\t{1,-15}", item.ParameterName, item.Value);
+                                    FileProcessed?.Invoke(row, true, "");
+                                }
+                            }
+                            var dbReport = _databaseService.SaveAnalyzerReportAsync(
+                                report.SampleId,
+                                report.AnalysisDate,
+                                Path.GetFileName(filePath),
+                                report.RawData,
+                                results
+                            ).GetAwaiter().GetResult();
+                            StatusChanged?.Invoke($"Database: Saved report ID {dbReport.Id}");
+                            StatusChanged?.Invoke(new string('-', 70));
+                            //// Log success
+                            //string resultMessage = $"Parsed {report.Results.Count} parameters - Moved to Processed folder";
+                            //FileProcessed?.Invoke(Path.GetFileName(filePath), true, resultMessage);
+                            //StatusChanged?.Invoke($"Successfully processed and moved: {Path.GetFileName(filePath)}");
+                        }
                     }
                     catch (Exception dbEx)
                     {
@@ -253,11 +278,6 @@ namespace NandanLabRawData
                         StatusChanged?.Invoke($"Warning: Could not save to database: {dbEx.Message}");
                     }
                 }
-
-                // Log success
-                string resultMessage = $"Parsed {report.Results.Count} parameters - Moved to Processed folder";
-                FileProcessed?.Invoke(Path.GetFileName(filePath), true, resultMessage);
-                StatusChanged?.Invoke($"Successfully processed and moved: {Path.GetFileName(filePath)}");
             }
             catch (Exception ex)
             {

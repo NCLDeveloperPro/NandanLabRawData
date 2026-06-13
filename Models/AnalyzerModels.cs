@@ -1,88 +1,106 @@
+using System;
+using System.Collections.Generic;
+
 namespace NandanLabRawData.Models
 {
-    /// <summary>
-    /// Represents a lab analyzer report (parent entity for test results)
-    /// </summary>
     public class AnalyzerReport
     {
         public int Id { get; set; }
-
-        /// <summary>
-        /// Sample/Patient ID from the lab analysis
-        /// </summary>
         public string SampleId { get; set; }
-
-        /// <summary>
-        /// Date and time when the analysis was performed
-        /// </summary>
         public DateTime? AnalysisDate { get; set; }
-
-        /// <summary>
-        /// Date and time when the file was processed and stored
-        /// </summary>
         public DateTime ProcessedDate { get; set; }
-
-        /// <summary>
-        /// Original filename that was processed
-        /// </summary>
         public string SourceFileName { get; set; }
-
-        /// <summary>
-        /// Raw data content from the analyzer file
-        /// </summary>
         public string RawData { get; set; }
-
-        /// <summary>
-        /// Indicates whether the report has been processed
-        /// </summary>
+        public DateTime CreatedDate { get; set; }
+        public DateTime? UpdatedDate { get; set; }
         public int? IsProcessed { get; set; }
 
-        /// <summary>
-        /// Collection of test results for this report
-        /// </summary>
         public ICollection<AnalyzerResult> Results { get; set; } = new List<AnalyzerResult>();
     }
 
-    /// <summary>
-    /// Represents individual test results from an analyzer report
-    /// </summary>
     public class AnalyzerResult
     {
         public int Id { get; set; }
-
-        /// <summary>
-        /// Foreign key to parent AnalyzerReport
-        /// </summary>
         public int AnalyzerReportId { get; set; }
-
-        /// <summary>
-        /// Name of the test parameter (e.g., "WBC", "RBC", "Hemoglobin")
-        /// </summary>
         public string ParameterName { get; set; }
-
-        /// <summary>
-        /// Measured value of the parameter
-        /// </summary>
         public string Value { get; set; }
-
-        /// <summary>
-        /// Unit of measurement (e.g., "K/uL", "M/uL", "g/dL")
-        /// </summary>
         public string Unit { get; set; }
-
-        /// <summary>
-        /// Reference range for normal values
-        /// </summary>
         public string ReferenceRange { get; set; }
-
-        /// <summary>
-        /// Flag indicating abnormality (e.g., "H" for high, "L" for low, blank for normal)
-        /// </summary>
         public string Flag { get; set; }
+        public DateTime CreatedDate { get; set; }
 
-        /// <summary>
-        /// Navigation property to parent AnalyzerReport
-        /// </summary>
         public AnalyzerReport AnalyzerReport { get; set; }
+    }
+
+    public class Report
+    {
+        public int Id { get; set; }
+        public int? RefDoctorId { get; set; }
+        public int? RefLabId { get; set; }
+        public int? LabId { get; set; }
+        public int ReferedBy { get; set; }
+        public DateTime? ReportPreparedDate { get; set; }
+        public DateTime? SampleCollectionDate { get; set; }
+        public DateTime? CreatedOn { get; set; }
+        public string CreatedBy { get; set; }
+        public DateTime? UpdatedOn { get; set; }
+        public string UpdatedBy { get; set; }
+        public DateTime? DeletedOn { get; set; }
+        public string DeletedBy { get; set; }
+        public bool IsCompleted { get; set; }
+        public DateTime? CompletedOn { get; set; }
+        public string CompletedBy { get; set; }
+        public bool IsDraft { get; set; }
+        public string ReportUniqueNumberPerDay { get; set; }
+        public string ReportPersonTitle { get; set; }
+        public string ReportPersonFirstname { get; set; }
+        public string ReportPersonLastname { get; set; }
+        public int AgeYear { get; set; }
+        public int AgeMonth { get; set; }
+        public int AgeDays { get; set; }
+        public string Gender { get; set; }
+        public bool IsSelfReport { get; set; }
+        public string ReportNote { get; set; }
+        public string MobileNumber { get; set; }
+        public string ReportPersonEmail { get; set; }
+        public string ReportUrlId { get; set; }
+        public bool IsVerifiedAndFinished { get; set; }
+        public bool? IsInvoiceGenerated { get; set; }
+        public int TotalPrice { get; set; }
+        public int Discount { get; set; }
+        public DateTime? PaymentDate { get; set; }
+        public string PaymentMethod { get; set; }
+        public string HistoryPaymentMethod { get; set; }
+        public bool IsReportMultiPage { get; set; }
+        public bool IsOutSample { get; set; }
+        public int PrintCount { get; set; }
+        public bool? IsWhatsappSend { get; set; }
+        public bool? IsReportReadyWhatsappSend { get; set; }
+        public string? SampleId { get; set; }
+        public virtual List<ReportDetail> ReportDetails { get; set; }
+    }
+
+    public class ReportDetail
+    {
+        public int Id { get; set; }
+        public int ReportId { get; set; }
+        public int ReportFormId { get; set; }
+        public bool IsReportOutsourced { get; set; }
+        public int? OutsourceLabId { get; set; }
+        public int CustomerPrice { get; set; }
+        public virtual List<ReportFieldData> ReportFieldData { get; set; }
+    }
+
+    public class ReportFieldData
+    {
+        public int Id { get; set; }
+        public int? FieldId { get; set; }
+        public string FieldValue { get; set; }
+        public int ReportDetailId { get; set; }
+        public string ZoneSize { get; set; }
+        public string RefZoneR { get; set; }
+        public string RefZoneI { get; set; }
+        public string RefZones { get; set; }
+        public string SensitivityPattern { get; set; }
     }
 }

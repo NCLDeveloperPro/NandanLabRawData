@@ -1,6 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.NetworkInformation;
 
 namespace NandanLabRawData.Logging
 {
@@ -92,12 +93,7 @@ namespace NandanLabRawData.Logging
         {
             try
             {
-                using (var client = new HttpClient())
-                {
-                    client.Timeout = TimeSpan.FromSeconds(3);
-                    var response = await client.GetAsync("http://www.msftconnecttest.com");
-                    return response.IsSuccessStatusCode;
-                }
+                return NetworkInterface.GetIsNetworkAvailable();
             }
             catch
             {

@@ -135,14 +135,14 @@ namespace NandanLabRawData
         private void OnFileCreated(object sender, FileSystemEventArgs e)
         {
             // Wait a moment to ensure file is fully written
-            Thread.Sleep(500);
+            Thread.Sleep(900);
             ProcessFile(e.FullPath);
         }
 
         private void OnFileChanged(object sender, FileSystemEventArgs e)
         {
             // Process file on change (content-based detection will handle duplicates)
-            Thread.Sleep(500);
+            Thread.Sleep(900);
             ProcessFile(e.FullPath);
         }
 
@@ -199,14 +199,7 @@ namespace NandanLabRawData
                     FileProcessed?.Invoke(Path.GetFileName(filePath), false, "Could not read file content");
                     return;
                 }
-
-                // Skip if this exact content was already processed
-                if (_processedFileHashes.Contains(contentHash))
-                {
-                    StatusChanged?.Invoke($"Skipped (duplicate content): {Path.GetFileName(filePath)}");
-                    return;
-                }
-
+                
                 // Parse the file
                 var reports = _parser.ParseRawData(filePath);
 
@@ -214,20 +207,19 @@ namespace NandanLabRawData
                 string fileName = Path.GetFileName(filePath);
                 string processedFilePath = Path.Combine(_processedFolderPath, fileName);
 
-                // Handle file naming conflict in Processed folder
-                if (File.Exists(processedFilePath))
-                {
-                    // Add timestamp to avoid conflicts
-                    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-                    string extension = Path.GetExtension(fileName);
-                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    fileName = $"{fileNameWithoutExtension}_{timestamp}{extension}";
-                    processedFilePath = Path.Combine(_processedFolderPath, fileName);
-                }
+                //// Handle file naming conflict in Processed folder
+                //if (File.Exists(processedFilePath))
+                //{
+                //    // Add timestamp to avoid conflicts
+                //    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+                //    string extension = Path.GetExtension(fileName);
+                //    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                //    fileName = $"{fileNameWithoutExtension}_{timestamp}{extension}";
+                //    processedFilePath = Path.Combine(_processedFolderPath, fileName);
+                //}
 
-                //File.Move(filePath, processedFilePath);
-
-                //// Store the hash of processed content
+                ////File.Move(filePath, processedFilePath);
+                ////// Store the hash of processed content
                 //_processedFileHashes.Add(contentHash);
 
                 // Save to database if service is available
@@ -237,6 +229,13 @@ namespace NandanLabRawData
                     {
                         foreach (var report in reports)
                         {
+                            // Skip if this exact content was already processed
+                            if (_processedFileHashes.Contains(report.SampleId))
+                            {
+                                StatusChanged?.Invoke($"Skipped (duplicate content SampleId): {report.SampleId}");
+                                return;
+                            }
+
                             var results = report.Results.Select(r => (
                                 r.ParameterName,
                                 r.Value,
@@ -266,6 +265,8 @@ namespace NandanLabRawData
                             ).GetAwaiter().GetResult();
                             StatusChanged?.Invoke($"Database: Saved report ID {dbReport.Id}");
                             StatusChanged?.Invoke(new string('-', 70));
+                            //// Store the hash of processed content
+                            _processedFileHashes.Add(report.SampleId);
                             //// Log success
                             //string resultMessage = $"Parsed {report.Results.Count} parameters - Moved to Processed folder";
                             //FileProcessed?.Invoke(Path.GetFileName(filePath), true, resultMessage);
